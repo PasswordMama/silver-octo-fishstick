@@ -1,0 +1,38 @@
+name: Build
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Unzips CaneIslands-pay.zip (or any .zip in the repo root) straight into the build folder.
+      # The zip's own .github folder is skipped so it can't overwrite this workflow.
+      - name: Unzip project
+        run: |
+          zip_file=$(ls ./*.zip 2>/dev/null | head -n 1)
+          if [ -z "$zip_file" ]; then
+            echo "No .zip file found in the repo root" >&2
+            exit 1
+          fi
+          echo "Unzipping $zip_file"
+          unzip -o "$zip_file" -x ".github/*" "__MACOSX/*"
+          ls -R src pom.xml
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Build
+        run: mvn -B package
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CaneIslands
+          path: target/CaneIslands.jar
